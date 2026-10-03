@@ -14,7 +14,7 @@ extends Node
 ## falling backward lies on top of it. Bosses keep vanilla behaviour.
 
 
-const VERSION := "1.3.1"
+const VERSION := "1.3.2"
 const TAG := "[InvisibleBackpackFix] "
 const CONFIG := "user://rtv_backpackfix.cfg"
 ## Backpacks each faction may spawn with (item file prefix -> weight): bandits and Nomads get low-tier ones, Guards
@@ -28,8 +28,6 @@ const PICKS := {
 ## when the backpack's own bone has no physics bone.
 const DEFAULT_SIZE := Vector3(0.35, 0.45, 0.22)
 const SPINE_BONES := ["Spine_03", "Spine_04", "Spine_02", "Spine_01"]
-## When the backpack is taken off a body whose ragdoll already froze: wake its physics this long so it settles.
-const RESETTLE_TIME := 2.5
 
 
 var _lib = null
@@ -184,36 +182,11 @@ func _attach_to_ragdoll(ai, holder, bag) -> bool:
 	bag.tree_exiting.connect(_on_bag_removed.bind(ai, shape), CONNECT_ONE_SHOT)
 	return true
 
-## The backpack left the body (looted). Remove its ragdoll box; if the ragdoll already froze in its final pose
-## (vanilla stops it after 10 s), wake it briefly so the body settles onto the ground, then freeze it again.
-func _on_bag_removed(ai, shape):
+## The backpack left the body (looted): remove its ragdoll box. A body still simulating (vanilla stops the ragdoll
+## after 10 s) settles onto the ground by itself. A frozen body is left exactly as it lies: restarting a frozen ragdoll
+## makes the game rebuild the bones at the AI's original death spot (a collapsed "ghost" body), so it's not done.
+func _on_bag_removed(_ai, shape):
 	if is_instance_valid(shape): shape.queue_free()
-	if !is_instance_valid(ai) || ai.is_queued_for_deletion() || !ai.is_inside_tree(): return
-	var skeleton = ai.get("skeleton")
-	if skeleton == null || bool(skeleton.get("active")): return
-	_resettle.call_deferred(ai, skeleton)
-
-func _resettle(ai, skeleton):
-	if !is_instance_valid(skeleton) || !skeleton.is_inside_tree(): return
-	skeleton.process_mode = Node.PROCESS_MODE_ALWAYS
-	skeleton.modifier_callback_mode_process = Skeleton3D.MODIFIER_CALLBACK_MODE_PROCESS_IDLE
-	for bone in skeleton.get_children():
-		if bone is PhysicalBone3D:
-			bone.axis_lock_linear_x = false
-			bone.axis_lock_linear_y = false
-			bone.axis_lock_linear_z = false
-			bone.axis_lock_angular_x = false
-			bone.axis_lock_angular_y = false
-			bone.axis_lock_angular_z = false
-			if bone.get_child_count() > 0 && bone.get_child(0) is CollisionShape3D: bone.get_child(0).disabled = false
-	skeleton.physical_bones_start_simulation()
-	await get_tree().create_timer(RESETTLE_TIME, false).timeout
-	if !is_instance_valid(skeleton) || !skeleton.is_inside_tree(): return
-	# Same end state as vanilla: bones locked and stopped (Ragdoll.DeactivateBones), skeleton frozen (AI.Freeze).
-	if skeleton.has_method("DeactivateBones"): skeleton.DeactivateBones()
-	else: skeleton.physical_bones_stop_simulation()
-	skeleton.modifier_callback_mode_process = Skeleton3D.MODIFIER_CALLBACK_MODE_PROCESS_MANUAL
-	skeleton.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 
 ## Fallback: take the backpack off and let it fall onto the floor beside the body.
 func _set_down(ai, bag):

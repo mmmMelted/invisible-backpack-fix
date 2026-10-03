@@ -54,7 +54,7 @@ backpack roll and right before an AI dies.
 ## Troubleshooting
 
 The log is at `%APPDATA%\Road to Vostok\logs\godot.log` (written when the game closes). Look for
-`[InvisibleBackpackFix] v1.3.1 loaded` and a line saying how many AI got a backpack when the map loaded.
+`[InvisibleBackpackFix] v1.3.2 loaded` and a line saying how many AI got a backpack when the map loaded.
 
 ## Credits
 
