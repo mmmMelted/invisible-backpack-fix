@@ -11,10 +11,11 @@ extends Node
 ## This mod makes the backpack choice itself: chance_percent (default 25, in user://rtv_backpackfix.cfg) of a backpack
 ## by faction (bandits/Nomads low-tier, Guards mid, Military high), every other copy deleted. On death the worn
 ## backpack becomes part of the ragdoll: a box the size of the backpack is added to the bone it hangs from, so a body
-## falling backward lies on top of it. Bosses keep vanilla behaviour.
+## falling backward lies on top of it, and the body isn't frozen until the backpack is taken, so it then settles onto
+## the ground. Bosses keep vanilla behaviour.
 
 
-const VERSION := "1.3.2"
+const VERSION := "1.4.0"
 const TAG := "[InvisibleBackpackFix] "
 const CONFIG := "user://rtv_backpackfix.cfg"
 ## Backpacks each faction may spawn with (item file prefix -> weight): bandits and Nomads get low-tier ones, Guards
@@ -28,6 +29,12 @@ const PICKS := {
 ## when the backpack's own bone has no physics bone.
 const DEFAULT_SIZE := Vector3(0.35, 0.45, 0.22)
 const SPINE_BONES := ["Spine_03", "Spine_04", "Spine_02", "Spine_01"]
+## Bodies still wearing their backpack aren't frozen (see "settling" below): at most MAX_HELD at once, each up to
+## HOLD_TIME; once the backpack is taken a body gets SETTLE_TIME before the vanilla freeze.
+const MAX_HELD := 8
+const HOLD_TIME := 180.0
+const SETTLE_TIME := 2.5
+const CHECK_INTERVAL := 0.5
 
 
 var _lib = null
@@ -36,6 +43,9 @@ var _worn := 0
 var _total := 0
 var _removed := 0
 var _reportQueued := false
+## skeleton instance id -> {"skeleton", "ai", "t" (held since), "settle" (release time once looted, or -1)}
+var _held := {}
+var _checkT := 0.0
 
 
 
@@ -59,6 +69,10 @@ func _on_lib_ready():
 		push_warning(TAG + "AI.SelectBackpack is replaced by another mod; only the death fixes are active")
 	_lib.hook("ai-death-pre", _on_death)
 	_lib.hook("ai-death-post", _on_death_post)
+	var bonesHook: int = _lib.hook("ragdoll-deactivatebones", _on_deactivate_bones)
+	var freezeHook: int = _lib.hook("ai-freeze", _on_freeze)
+	if bonesHook == -1 || freezeHook == -1:
+		push_warning(TAG + "Ragdoll.DeactivateBones / AI.Freeze replaced by another mod; looted bodies may stay propped up")
 
 
 
@@ -182,11 +196,65 @@ func _attach_to_ragdoll(ai, holder, bag) -> bool:
 	bag.tree_exiting.connect(_on_bag_removed.bind(ai, shape), CONNECT_ONE_SHOT)
 	return true
 
-## The backpack left the body (looted): remove its ragdoll box. A body still simulating (vanilla stops the ragdoll
-## after 10 s) settles onto the ground by itself. A frozen body is left exactly as it lies: restarting a frozen ragdoll
-## makes the game rebuild the bones at the AI's original death spot (a collapsed "ghost" body), so it's not done.
+## The backpack left the body (looted): remove its ragdoll box, so the (still live, see "settling") ragdoll settles
+## onto the ground.
 func _on_bag_removed(_ai, shape):
 	if is_instance_valid(shape): shape.queue_free()
+
+## ------------------------------------------------------------------------------------------------ settling
+
+## Vanilla Ragdoll.gd stops the ragdoll 10 s after death: DeactivateBones() (stop physics, which also drops the bones'
+## physics poses) then AI.Freeze() (stop updating the skeleton). A frozen ragdoll can't be restarted safely (it rebuilds
+## at the death spot), so a body still wearing its backpack isn't frozen: the ragdoll stays live (the physics engine
+## puts still bodies to sleep), and once the backpack is taken it settles onto the ground, then the vanilla freeze runs.
+func _on_deactivate_bones():
+	var skeleton = _lib._caller
+	var ai = skeleton.owner
+	if ai == null || !("dead" in ai) || !ai.dead: return
+	var id: int = skeleton.get_instance_id()
+	if _held.has(id):
+		_lib.skip_super()
+		return
+	if _held.size() >= MAX_HELD || !_wears_backpack(skeleton): return
+	_held[id] = {"skeleton": skeleton, "ai": ai, "t": Time.get_ticks_msec() / 1000.0, "settle": -1.0}
+	_lib.skip_super()
+
+## Ragdoll.gd calls AI.Freeze() right after DeactivateBones(): skip it too while the body is held.
+func _on_freeze():
+	var skeleton = _lib._caller.get("skeleton")
+	if skeleton != null && _held.has(skeleton.get_instance_id()): _lib.skip_super()
+
+func _physics_process(delta):
+	_checkT += delta
+	if _checkT < CHECK_INTERVAL || _held.is_empty(): return
+	_checkT = 0.0
+	var now := Time.get_ticks_msec() / 1000.0
+	for id in _held.keys():
+		var entry: Dictionary = _held[id]
+		var skeleton = entry["skeleton"]
+		if !is_instance_valid(skeleton) || !is_instance_valid(entry["ai"]) || !skeleton.is_inside_tree():
+			_held.erase(id)
+		elif now - float(entry["t"]) > HOLD_TIME:
+			_release(id)
+		elif float(entry["settle"]) < 0.0:
+			if !_wears_backpack(skeleton): entry["settle"] = now + SETTLE_TIME
+		elif now >= float(entry["settle"]):
+			_release(id)
+
+## The vanilla end state: stop the ragdoll and freeze the skeleton (the hooks let it through once it's not held).
+func _release(id: int):
+	var entry: Dictionary = _held[id]
+	_held.erase(id)
+	if entry["skeleton"].has_method("DeactivateBones"): entry["skeleton"].DeactivateBones()
+	if entry["ai"].has_method("Freeze"): entry["ai"].Freeze()
+
+## The backpack's ragdoll box is on a bone while the backpack is worn and freed when it's taken.
+func _wears_backpack(skeleton) -> bool:
+	for bone in skeleton.get_children():
+		if bone is PhysicalBone3D:
+			var box = bone.get_node_or_null("BackpackCollider")
+			if box != null && !box.is_queued_for_deletion(): return true
+	return false
 
 ## Fallback: take the backpack off and let it fall onto the floor beside the body.
 func _set_down(ai, bag):

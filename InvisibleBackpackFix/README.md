@@ -14,7 +14,7 @@ still drop it like normal.
 It also fixes worn backpacks disappearing into the ground. The game welds the backpack to the body as a frozen item
 that the ragdoll doesn't know about, so a body that falls backward pushes it into the floor where you can't reach it.
 The mod makes the backpack part of the ragdoll instead: the backpack stays on the body, and a body that falls on its
-back lies on top of it, like you'd expect.
+back lies on top of it, like you'd expect. Take the backpack and the body settles back down onto the ground.
 
 ## More backpacks, by faction
 
@@ -48,13 +48,13 @@ Uninstall: delete the file (or uncheck it).
 
 ## Compatibility
 
-Single player. Doesn't touch your save. Works alongside other AI mods; it only runs right after the game's own
-backpack roll and right before an AI dies.
+Single player. Doesn't touch your save. Works alongside other AI mods; it only runs at the game's own backpack roll,
+when an AI dies, and when a dead body's ragdoll comes to rest.
 
 ## Troubleshooting
 
 The log is at `%APPDATA%\Road to Vostok\logs\godot.log` (written when the game closes). Look for
-`[InvisibleBackpackFix] v1.3.2 loaded` and a line saying how many AI got a backpack when the map loaded.
+`[InvisibleBackpackFix] v1.4.0 loaded` and a line saying how many AI got a backpack when the map loaded.
 
 ## Credits
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.0
+- Bodies now settle onto the ground whenever you take their backpack, even long after they died (they used to stay
+  propped up if the ragdoll had already come to rest). A body wearing a backpack keeps its ragdoll live until the
+  backpack is taken (up to 8 bodies at a time, 3 minutes each).
+
 ## 1.3.2
 - Fixed a body vanishing and reappearing as a collapsed "ghost" at its death spot when you took its backpack after
   the ragdoll had already come to rest. Bodies now stay where they lie (taken within ~10 s of death they still

@@ -1,11 +1,12 @@
 [mod]
 name="Invisible Backpack Fix"
 id="invisible_backpack_fix"
-version="1.3.2"
+version="1.4.0"
 priority=0
 
 [autoload]
 InvisibleBackpackFix="res://InvisibleBackpackFix/Main.gd"
 
 [hooks]
-res://Scripts/AI.gd = "SelectBackpack, Death"
+res://Scripts/AI.gd = "SelectBackpack, Death, Freeze"
+res://Scripts/Ragdoll.gd = "DeactivateBones"
