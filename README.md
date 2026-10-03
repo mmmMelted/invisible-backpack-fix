@@ -1,40 +1,27 @@
 # Invisible Backpack Fix
 
-**Dead AI drop a pile of invisible backpacks. This stops that.**
+**Fixes the backpack bugs on dead AI in Road to Vostok.**
 
-Every AI in Road to Vostok carries one of each backpack model, hidden. When an AI spawns, only about 1 in 20 actually
-gets a backpack: the game shows that one and deletes the others. For everyone else it does nothing, so all the hidden
-backpacks stay on them. When the AI dies, the game switches every backpack it carries into a physical, lootable item,
-visible or not. That's where the stack of invisible backpacks on a body comes from.
+- **No more invisible backpacks.** Bodies only drop the backpack you can actually see, not a pile of hidden ones.
+- **Backpacks have collision.** A backpack stays on the body instead of sinking into the ground, so you can always
+  loot it.
+- **Bodies settle properly.** Take the backpack and the body drops back down to the ground instead of floating.
+- **More backpacks.** About 1 in 4 AI now carry one (vanilla is 1 in 20):
+  - **Bandits and Nomads:** cheap bags (Duffel bags, Nomad backpacks, sometimes a Patrol backpack).
+  - **Guards:** mostly Patrol and Jaeger backpacks.
+  - **Military:** mostly Jaeger and Kantamus backpacks.
 
-This mod removes the unused hidden backpacks as soon as an AI spawns without one (the same thing the game already
-does when an AI does get a backpack), and clears any leftovers right before death. AI that really wear a backpack
-still drop it like normal.
+Bosses are left alone.
 
-It also fixes worn backpacks disappearing into the ground. The game welds the backpack to the body as a frozen item
-that the ragdoll doesn't know about, so a body that falls backward pushes it into the floor where you can't reach it.
-The mod makes the backpack part of the ragdoll instead: the backpack stays on the body, and a body that falls on its
-back lies on top of it, like you'd expect. Take the backpack and the body settles back down onto the ground.
+## Settings
 
-## More backpacks, by faction
-
-In vanilla only about 1 in 20 AI carries a backpack. With this mod **1 in 4** do, and what they carry depends on who
-they are:
-
-- **Bandits and Nomads:** low-tier. Duffel bags and Nomad backpacks, sometimes a Patrol backpack.
-- **Guards:** mostly Patrol and Jaeger backpacks, occasionally something else.
-- **Military:** mostly Jaeger and Kantamus backpacks, sometimes a Patrol backpack.
-
-The mod makes the choice itself, so every AI ends up with exactly one visible backpack or none.
-
-To change how often AI carry one, edit `%APPDATA%\Road to Vostok\rtv_backpackfix.cfg` (created on first launch):
+Want vanilla backpack rates? Edit `%APPDATA%\Road to Vostok\rtv_backpackfix.cfg` (created on first launch) and set
+`chance_percent` to `5`:
 
 ```
 [backpacks]
 chance_percent=25.0
 ```
-
-Set it to `5.0` for the vanilla rate.
 
 ## Download
 
@@ -43,23 +30,22 @@ build it yourself with `python build.py`).
 
 ## Requirements
 
-- Road to Vostok Build 2 ("Nomads", v0.2.0.0), Godot 4.6.3.
+- Road to Vostok Build 2 ("Nomads", v0.2.0.0).
 - [Metro Mod Loader](https://github.com/ametrocavich/vostok-mod-loader) v3.4.1 or newer.
 
 ## Install
 
-Drop `InvisibleBackpackFix.vmz` into `Road to Vostok/mods/` and make sure it's checked in the loader window.
-Uninstall: delete the file (or uncheck it).
+Drop `InvisibleBackpackFix.vmz` into `Road to Vostok/mods/` and check it in the loader window.
+To uninstall, delete the file (or uncheck it).
 
 ## Compatibility
 
-Single player. Doesn't touch your save. Works alongside other AI mods; it only runs at the game's own backpack roll,
-when an AI dies, and when a dead body's ragdoll comes to rest.
+Single player. Safe for existing saves. Works alongside other AI mods.
 
 ## Troubleshooting
 
 The log is at `%APPDATA%\Road to Vostok\logs\godot.log` (written when the game closes). Look for
-`[InvisibleBackpackFix] v1.4.0 loaded` and a line saying how many AI got a backpack when the map loaded.
+`[InvisibleBackpackFix] v1.4.0 loaded`.
 
 ## Credits
 
